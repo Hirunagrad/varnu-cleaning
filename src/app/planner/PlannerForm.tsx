@@ -12,7 +12,8 @@ export default function PlannerForm({
   plannedBy,
   currentUser,
   year,
-  week
+  week,
+  upcomingSundayUser
 }: { 
   initialSchedule: Schedule;
   plannedBy: User | null;

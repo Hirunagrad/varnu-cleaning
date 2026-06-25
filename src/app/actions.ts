@@ -295,12 +295,21 @@ export async function respondToSwap(swapId: string, approved: boolean): Promise<
     const dayName = format(date, "EEEE") as keyof Schedule;
 
     if (dayName !== "Sunday") {
-      const schedule = await getSchedule(year, week) || {};
-      schedule[dayName] = swap.fromUser; // Swap fromUser becomes the one who takes it? Wait.
-      // If fromUser requested to swap WITH toUser.
-      // So toUser is now taking the shift.
-      schedule[dayName] = swap.toUser;
-      await saveSchedule(year, week, schedule);
+      const key = `schedule:week-${year}-${week}`;
+      const existingData = await getScheduleData(year, week);
+      let oldSchedule: Schedule = existingData ? existingData.assignments : {};
+      if (existingData && !("assignments" in existingData)) {
+        oldSchedule = existingData as unknown as Schedule;
+      }
+      
+      oldSchedule[dayName] = swap.toUser;
+      const data: ScheduleData = { 
+        assignments: oldSchedule, 
+        plannedBy: existingData?.plannedBy || swap.toUser 
+      };
+      
+      await kv.set(key, data);
+      revalidatePath("/planner");
     }
   }
 

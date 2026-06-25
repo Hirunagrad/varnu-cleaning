@@ -1,0 +1,41 @@
+{
+  "schedule:week-2026-26": {
+    "assignments": {
+      "Monday": "Hiruna",
+      "Tuesday": "Hiruna",
+      "Thursday": "Chamin",
+      "Friday": "Chamin",
+      "Saturday": "Tharindu",
+      "Wednesday": "Tharindu"
+    },
+    "plannedBy": "Tharindu"
+  },
+  "user:Chamin:pin": "1234",
+  "user:Tharindu:pin": "2222",
+  "swaps:all": [
+    {
+      "id": "bdd63e62-05e2-4855-a29f-d9b1c2441166",
+      "date": "2026-06-26",
+      "fromUser": "Chamin",
+      "toUser": "Tharindu",
+      "status": "denied",
+      "createdAt": "2026-06-25T17:12:17.188Z"
+    },
+    {
+      "id": "ee6b186d-c611-47f0-a5d1-af8b5d332ebb",
+      "date": "2026-06-25",
+      "fromUser": "Tharindu",
+      "toUser": "Chamin",
+      "status": "approved",
+      "createdAt": "2026-06-25T16:56:14.914Z"
+    },
+    {
+      "id": "df1baa1f-5531-4570-8ff1-848c0c83aa72",
+      "date": "2026-06-25",
+      "fromUser": "Chamin",
+      "toUser": "Tharindu",
+      "status": "approved",
+      "createdAt": "2026-06-25T16:40:33.053Z"
+    }
+  ]
+}

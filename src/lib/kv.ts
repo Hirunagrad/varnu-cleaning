@@ -1,9 +1,17 @@
-import { kv as vercelKv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import fs from 'fs/promises';
 import path from 'path';
 
+const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const vercelKv = createClient({
+  url: kvUrl || 'https://mock.upstash.io',
+  token: kvToken || 'mock',
+});
+
 // Mock KV using a local JSON file if environment variables are not set.
-const USE_MOCK = !process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN;
+const USE_MOCK = !kvUrl || !kvToken;
 const MOCK_DB_PATH = path.join(process.cwd(), '.mock-kv.json');
 
 async function readMockDb(): Promise<Record<string, any>> {

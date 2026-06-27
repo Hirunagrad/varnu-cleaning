@@ -82,48 +82,58 @@ export async function getSchedule(year: number, week: number): Promise<Schedule 
   return data ? data.assignments : null;
 }
 
-export async function saveSchedule(year: number, week: number, selectedDays: (keyof Schedule)[]): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) throw new Error("Unauthorized");
+export async function saveSchedule(year: number, week: number, selectedDays: (keyof Schedule)[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return { success: false, error: "Unauthorized" };
 
-  if (selectedDays.length !== 2) {
-    throw new Error("You must select exactly 2 days.");
-  }
-
-  const key = `schedule:week-${year}-${week}`;
-  const existingData = await getScheduleData(year, week);
-  let oldSchedule: Schedule = existingData ? existingData.assignments : {};
-  // Handle legacy format fallback if necessary
-  if (existingData && !("assignments" in existingData)) {
-    oldSchedule = existingData as unknown as Schedule;
-  }
-
-  // Verify that the user is not trying to overwrite someone else's day
-  for (const day of selectedDays) {
-    if (oldSchedule[day] && oldSchedule[day] !== currentUser) {
-      throw new Error(`Cannot claim ${day}, it is already assigned to ${oldSchedule[day]}.`);
+    if (selectedDays.length !== 2) {
+      return { success: false, error: "You must select exactly 2 days." };
     }
-  }
 
-  const newSchedule: Schedule = { ...oldSchedule };
-
-  // Unclaim any days the current user previously claimed but didn't select this time
-  const DAYS: (keyof Schedule)[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  for (const day of DAYS) {
-    if (newSchedule[day] === currentUser && !selectedDays.includes(day)) {
-      delete newSchedule[day];
+    const key = `schedule:week-${year}-${week}`;
+    const existingData = await getScheduleData(year, week);
+    
+    let oldSchedule: Schedule = {};
+    if (existingData) {
+      if (existingData.assignments) {
+        oldSchedule = existingData.assignments;
+      } else if (!("assignments" in existingData)) {
+        oldSchedule = existingData as unknown as Schedule;
+      }
     }
-  }
 
-  // Claim the newly selected days
-  for (const day of selectedDays) {
-    newSchedule[day] = currentUser;
-  }
+    // Verify that the user is not trying to overwrite someone else's day
+    for (const day of selectedDays) {
+      if (oldSchedule[day] && oldSchedule[day] !== currentUser) {
+        return { success: false, error: `Cannot claim ${day}, it is already assigned to ${oldSchedule[day]}.` };
+      }
+    }
 
-  const data: ScheduleData = { assignments: newSchedule, plannedBy: currentUser };
-  await kv.set(key, data);
-  revalidatePath("/");
-  revalidatePath("/planner");
+    const newSchedule: Schedule = { ...oldSchedule };
+
+    // Unclaim any days the current user previously claimed but didn't select this time
+    const DAYS: (keyof Schedule)[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    for (const day of DAYS) {
+      if (newSchedule[day] === currentUser && !selectedDays.includes(day)) {
+        delete newSchedule[day];
+      }
+    }
+
+    // Claim the newly selected days
+    for (const day of selectedDays) {
+      newSchedule[day] = currentUser;
+    }
+
+    const data: ScheduleData = { assignments: newSchedule, plannedBy: currentUser };
+    await kv.set(key, data);
+    revalidatePath("/");
+    revalidatePath("/planner");
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "An unknown error occurred while saving the schedule." };
+  }
 }
 
 export async function getSundayUser(date: Date): Promise<User> {

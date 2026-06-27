@@ -52,7 +52,10 @@ export default function PlannerForm({
   const handleSave = () => {
     if (claimCount !== 2) return;
     startTransition(async () => {
-      await saveSchedule(year, week, claimedDays);
+      const res = await saveSchedule(year, week, claimedDays);
+      if (res && !res.success) {
+        alert(res.error || "Failed to save schedule.");
+      }
     });
   };
 

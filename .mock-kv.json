@@ -8,7 +8,7 @@
       "Saturday": "Tharindu",
       "Wednesday": "Tharindu"
     },
-    "plannedBy": "Tharindu"
+    "plannedBy": "Hiruna"
   },
   "user:Chamin:pin": "1234",
   "user:Tharindu:pin": "2222",
@@ -37,5 +37,6 @@
       "status": "approved",
       "createdAt": "2026-06-25T16:40:33.053Z"
     }
-  ]
+  ],
+  "user:Hiruna:pin": "3333"
 }

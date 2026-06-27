@@ -138,7 +138,7 @@ export async function getSundayUser(date: Date): Promise<User> {
 
 export async function getHistory(): Promise<HistoryRecord[]> {
   const records = await kv.lrange<HistoryRecord>("history:all", 0, 100);
-  return records || [];
+  return (records || []).filter(Boolean);
 }
 
 export async function markCompleted(dateStr: string, user: User, chores: string): Promise<void> {
@@ -178,7 +178,7 @@ export async function markCompleted(dateStr: string, user: User, chores: string)
 
 export async function getCompletedBy(dateStr: string): Promise<User | null> {
   const records = await getHistory();
-  const record = records.find(r => r.date === dateStr);
+  const record = records.find(r => r && r.date === dateStr);
   return record ? record.user : null;
 }
 
@@ -211,7 +211,7 @@ export async function undoCompletion(dateStr: string): Promise<void> {
 
 export async function getPendingSwaps(): Promise<SwapRequest[]> {
   const swaps = await kv.lrange<SwapRequest>("swaps:all", 0, -1);
-  return (swaps || []).filter(s => s.status === "pending");
+  return (swaps || []).filter(s => s && s.status === "pending");
 }
 
 export async function getFutureAssignedDays(): Promise<{ dateStr: string; dayName: string; chores: string }[]> {
@@ -221,14 +221,30 @@ export async function getFutureAssignedDays(): Promise<{ dateStr: string; dayNam
   const futureDays: { dateStr: string; dayName: string; chores: string }[] = [];
   const now = new Date();
   
+  // Pre-fetch the schedules for the next 3 weeks in parallel to prevent Vercel timeout
+  const weeksToFetch = new Set<string>();
+  for (let i = 1; i <= 14; i++) {
+    const targetDate = new Date();
+    targetDate.setDate(now.getDate() + i);
+    weeksToFetch.add(`${getYear(targetDate)}-${getISOWeek(targetDate)}`);
+  }
+
+  const schedulesMap: Record<string, Schedule | null> = {};
+  await Promise.all(
+    Array.from(weeksToFetch).map(async (yw) => {
+      const [yearStr, weekStr] = yw.split("-");
+      const sched = await getSchedule(parseInt(yearStr), parseInt(weekStr));
+      schedulesMap[yw] = sched;
+    })
+  );
+
   // Check next 14 days
   for (let i = 1; i <= 14; i++) {
     const targetDate = new Date();
     targetDate.setDate(now.getDate() + i);
     const dateStr = format(targetDate, "yyyy-MM-dd");
     const dayName = format(targetDate, "EEEE") as keyof Schedule;
-    const year = getYear(targetDate);
-    const week = getISOWeek(targetDate);
+    const yw = `${getYear(targetDate)}-${getISOWeek(targetDate)}`;
 
     let assignedUser: User | null = null;
     let chores = "";
@@ -237,13 +253,12 @@ export async function getFutureAssignedDays(): Promise<{ dateStr: string; dayNam
       assignedUser = await getSundayUser(targetDate);
       chores = "Washroom + Floor";
     } else {
-      const schedule = await getSchedule(year, week);
+      const schedule = schedulesMap[yw];
       assignedUser = schedule ? schedule[dayName] || null : null;
       chores = "Kitchen + Floor";
     }
 
     if (assignedUser === currentUser) {
-      // Also check if completed? Future days shouldn't be completed, but just in case.
       futureDays.push({ dateStr, dayName, chores });
     }
   }
